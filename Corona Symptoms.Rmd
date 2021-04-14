@@ -1,0 +1,10 @@
+---
+title: "corona"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = TRUE)
+```
+
+this dataset involves people who are experiencing symptoms of COVID-19 such as
