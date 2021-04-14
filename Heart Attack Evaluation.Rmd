@@ -1,0 +1,26 @@
+---
+title: "Heart Attack Evaluation"
+author: 'Group 7: Megan Lin, Eva Mustafic, James Powell'
+date: "4/14/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(caret)
+```
+
+Part 1. Select either as a lab or individual two datasets that you have not used before but that are of interest to you/group. Define questions that can be answered using a classification, specifically kNN, for each dataset. Build kNN models and then use the evaluation metrics we discussed in class (Accuracy, TPR, FPR, F1, Kappa, LogLoss and ROC/AUC) to assess the quality of the models. Make sure to calculate the base rate or prevalence to provide a reference for some of these measures.
+Data Source: https://www.kaggle.com/rashikrahmanpritom/heart-attack-analysis-prediction-dataset
+
+
+
+Part 2. Take a closer look at where miss-classification errors are occurring, is there a pattern? If so discuss this pattern and why you think this is the case. 
+
+Part 3. Based on your exploration in Part 2, change the threshold using the function provided, what differences do you see in the evaluation metrics? Speak specifically to the metrics you think are best suited to address the questions you are trying to answer. 
+
+Part 4. Summarize your findings to include recommendations on how you might change each of the two kNN models based on the results. These recommendations might include gathering more data, adjusting the threshold or maybe that it's working fine at the current level and nothing should be done. Regardless of the outcome, what should we be aware of when these models are deployed? 
