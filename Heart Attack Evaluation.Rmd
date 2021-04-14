@@ -15,12 +15,92 @@ library(caret)
 ```
 
 Part 1. Select either as a lab or individual two datasets that you have not used before but that are of interest to you/group. Define questions that can be answered using a classification, specifically kNN, for each dataset. Build kNN models and then use the evaluation metrics we discussed in class (Accuracy, TPR, FPR, F1, Kappa, LogLoss and ROC/AUC) to assess the quality of the models. Make sure to calculate the base rate or prevalence to provide a reference for some of these measures.
+
 Data Source: https://www.kaggle.com/rashikrahmanpritom/heart-attack-analysis-prediction-dataset
 
+```{r echo = FALSE}
+#Let's load in our data
+data <- read_csv('heart.csv')
+#No missing datapoints so no need to clean
+
+#Recode gender from 0->female, 1->male
+data$sex <- recode(data$sex, '0' = 'female', '1' = 'male')
+
+#Recode fasting blood sugar>120 from 0->low, 1->high
+data$fbs <- recode(data$fbs, '0' = 'Low', '1' = 'High')
+
+#Recode exercise induced angina from 0->no, 1->yes
+data$exng <- recode(data$exng, '0' = 'No', '1' = 'Yes')
+
+#Recode chest pain to the types of chest pain
+data$cp <- recode(data$cp, '0' = 'typ angina', '1' = 'atyp angina', '2' = 'non-ang pain', '3'='asymptomatic')
+
+#Recode resting electrocardiographic results  from 0->normal, 1->ST-T wave, 2->ventricular hypertrophy'
+data$restecg <- recode(data$restecg, '0' = 'normal', '1' = 'ST-T', '2' = 'ventr hypertrophy')
+
+#Recode the columns to be numeric
+data$age <- as.numeric(data$age)
+data$trtbps <- as.numeric(data$trtbps)
+data$chol <- as.numeric(data$chol)
+data$thalachh <- as.numeric(data$thalachh)
+data$oldpeak <- as.numeric(data$oldpeak)
+
+```
 
 
 Part 2. Take a closer look at where miss-classification errors are occurring, is there a pattern? If so discuss this pattern and why you think this is the case. 
 
+```{r echo = FALSE}
+#We need to create index that we can use for developing a test and training set. Training is for building the tree and test is for checking the quality of the model. 
+
+set.seed(1980)# this will allow you to replicate the outcomes of randomized process
+
+#caret function the will allow us to divide the data into test and train, it will randomly assign rows into each category while maintaining the relative balance (0 and 1s) of the target variable. 
+split_index <- createDataPartition(loan_pred$outcome, p = .8, #selects the split, 80% training 20% for test 
+                                  list = FALSE,#output of the data, we don't want a list
+                                  times = 1)#the number of partitions to create we just want one
+
+
+#then we just pass the index to our dataset
+
+train_data <- loan_pred[split_index,]
+dim(train_data)
+
+
+test <- loan_pred[-split_index,]
+dim(test)
+
+#now let's build out tree
+
+loan_tree <- train(outcome~., #model formula everything used to classify outcome
+                   data=train_data, #use the training data
+                   method='rpart',# indicates the use of tree based model
+                   na.action = na.omit)#omitting the missing values
+                   
+loan_tree #let's take a look, pretty good, accuracy is at roughly 84%, not bad. Accuracy is (TP + TN)/(TP+TN+FP+FN). High level indicator of model efficiency. 
+
+#Quick overview of how bootstrapping works. 
+xx <- tibble(loan_tree$resample)
+mean(xx$Accuracy)
+
+loan_tree$finalModel$variable.importance#This will tell us the most important variables in terms of reducing our model error...hahaha liking funfetti takes the cake!! As it should anyone that doesn't enjoy a nice piece of funfetti cake just can't be trusted. (calculated for each variable individually as the sum of the decrease in impurity, includes as a primary split and when it appears as a surrogate)
+
+library(RColorBrewer)
+coul <- brewer.pal(5, "Set2")
+barplot(loan_tree$finalModel$variable.importance, col=coul)#Totally unnecessary but couldn't help myself, funfetti barchart...
+
+
+loan_tree$finalModel
+```
+
 Part 3. Based on your exploration in Part 2, change the threshold using the function provided, what differences do you see in the evaluation metrics? Speak specifically to the metrics you think are best suited to address the questions you are trying to answer. 
 
+```{r echo = FALSE}
+
+```
+
 Part 4. Summarize your findings to include recommendations on how you might change each of the two kNN models based on the results. These recommendations might include gathering more data, adjusting the threshold or maybe that it's working fine at the current level and nothing should be done. Regardless of the outcome, what should we be aware of when these models are deployed? 
+
+```{r echo = FALSE}
+
+```
