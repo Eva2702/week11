@@ -3,8 +3,72 @@ title: "corona"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, echo = FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, include = TRUE)
+library(tidyverse)
+library(caret)
+library(RColorBrewer)
+library(ROCR)
+library(MLmetrics)
 ```
 
-this dataset involves people who are experiencing symptoms of COVID-19 such as
+###Part 1 
+
+####Instructions
+
+Select either as a lab or individual two datasets that you have not used before but that are of interest to you/group. Define questions that can be answered using a classification, specifically kNN, for each dataset. Build kNN models and then use the evaluation metrics we discussed in class (Accuracy, TPR, FPR, F1, Kappa, LogLoss and ROC/AUC) to assess the quality of the models. Make sure to calculate the base rate or prevalence to provide a reference for some of these measures.
+
+####Implementation 
+
+This data set involves people who are experiencing symptoms of COVID-19 such as fever, tiredness, dry-couch, sore-throat, etc., as well as physical characteristics such as sex and age. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient considers their symptoms to be severe.
+
+Data Source: https://www.kaggle.com/iamhungundji/covid19-symptoms-checker
+```{r}
+Rona <- read.csv('corona.csv')
+#This data set is nearly perfect, there are no NA's or weird characters and every column is in a boolean format except for the country variable, which needs to be a String or character vector
+
+#to test for the severe severity, we need to remove the other severity categories because that owuld give us 100% clarity on whether they think they're severe or not
+Corona_data <- Rona[ , c(-22, -20, -21)] 
+
+```
+
+
+```{r}
+set.seed(1980)# setting the seed for replication purposes
+
+split_index <- createDataPartition(Rona$outcome, p = .8, #80-20: train-test
+                                  list = FALSE,# no lists please
+                                  times = 1)#just 1 partition
+train_data <- loan_pred[,]
+dim(train_data)
+
+
+test <- loan_pred[-split_index,]
+dim(test)
+```
+
+###Part 2
+
+Take a closer look at where miss-classification errors are occurring, is there a pattern? If so discuss this pattern and why you think this is the case. 
+
+```{r}
+
+```
+
+
+###Part 3
+
+Based on your exploration in Part 2, change the threshold using the function provided, what differences do you see in the evaluation metrics? Speak specifically to the metrics you think are best suited to address the questions you are trying to answer. 
+
+```{r}
+
+```
+
+###Part 4 
+
+Summarize your findings to include recommendations on how you might change each of the two kNN models based on the results. These recommendations might include gathering more data, adjusting the threshold or maybe that it's working fine at the current level and nothing should be done. Regardless of the outcome, what should we be aware of when these models are deployed? 
+
+```{r}
+
+```
+
