@@ -19,24 +19,40 @@ Part 1. Select either as a lab or individual two datasets that you have not used
 Data Source: https://www.kaggle.com/rashikrahmanpritom/heart-attack-analysis-prediction-dataset
 
 ```{r echo = FALSE}
+?recode
 #Let's load in our data
 data <- read_csv('heart.csv')
 #No missing datapoints so no need to clean
 
 #Recode gender from 0->female, 1->male
-data$sex <- recode(data$sex, '0' = 'female', '1' = 'male')
+data$sex[data$sex=='female'] <- 0
+data$sex[data$sex=='male'] <- 1
+data$sex<- as.factor(data$sex)
 
 #Recode fasting blood sugar>120 from 0->low, 1->high
-data$fbs <- recode(data$fbs, '0' = 'Low', '1' = 'High')
+data$fbs[data$fbs=='low'] <- 0
+data$fbs[data$fbs=='high'] <- 1
+data$fbs<- as.factor(data$fbs)
 
 #Recode exercise induced angina from 0->no, 1->yes
-data$exng <- recode(data$exng, '0' = 'No', '1' = 'Yes')
+data$exng[data$exng=='No'] <- 0
+data$exng[data$exng=='Yes'] <- 1
+data$exng<- as.factor(data$exng)
 
 #Recode chest pain to the types of chest pain
-data$cp <- recode(data$cp, '0' = 'typ angina', '1' = 'atyp angina', '2' = 'non-ang pain', '3'='asymptomatic')
+
+data$cp[data$cp=='typ angina'] <- 0
+data$cp[data$cp=='atyp angina'] <- 1
+data$cp[data$cp=='non-ang pain'] <- 2
+data$cp[data$cp=='asymptomatic'] <- 3
+data$cp<- as.factor(data$cp)
 
 #Recode resting electrocardiographic results  from 0->normal, 1->ST-T wave, 2->ventricular hypertrophy'
-data$restecg <- recode(data$restecg, '0' = 'normal', '1' = 'ST-T', '2' = 'ventr hypertrophy')
+
+data$restecg [data$restecg =='normal'] <- 0
+data$restecg [data$restecg =='ST-T'] <- 1
+data$restecg [data$restecg =='ventr hypertrophy'] <- 2
+data$restecg<- as.factor(data$restecg)
 
 #Recode the columns to be numeric
 data$age <- as.numeric(data$age)
