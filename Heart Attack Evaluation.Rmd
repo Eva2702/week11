@@ -87,20 +87,20 @@ barplot(tree$finalModel$variable.importance, col=coul)
 ```{r echo = FALSE}
 #First we need to do some predictions using the test data 
 
-loan_eval <-(predict(loan_tree,newdata = test))#generates 1s and 0s
+eval <-(predict(tree,newdata = test))#generates 1s and 0s
 
-loan_eval_prob <- predict(loan_tree,newdata = test, type = "prob")#this gives us the predicted prob, we will need these later for the fairness evaluation
-View(loan_eval_prob)
+eval_prob <- predict(tree, newdata = test, type = "prob")#this gives us the predicted prob, which we will use later for the fairness evaluation
 
-View(test$outcome)
-table(loan_eval, test$outcome)#essential the confusion matrix, though we can make a fancy one using caret built in functions
+#ERROR HERE
 
-
-confusionMatrix(loan_eval, test$outcome, positive = "1", dnn=c("Prediction", "Actual"), mode = "sens_spec")#change to everything
-
+table(eval, test$output)#essentially the confusion matrix
+confusionMatrix(eval, test$output, positive = "1", dnn=c("Prediction", "Actual"), mode = "sens_spec")
 #from the above we can see our True Positive Rate or sensitivity is quite good @ 88%, False Positive Rate (1-Specificity) is also not terrible ~ @ 27%, we want this to be low.(Subject to change) 
+```
 
+Part 3. Based on your exploration in Part 2, change the threshold using the function provided, what differences do you see in the evaluation metrics? Speak specifically to the metrics you think are best suited to address the questions you are trying to answer. 
 
+```{r echo = FALSE}
 #Quick function to explore various threshold levels and output a confusion matrix
 
 adjust_thres <- function(x, y, z) {
@@ -109,12 +109,13 @@ adjust_thres <- function(x, y, z) {
   confusionMatrix(thres, z, positive = "1", dnn=c("Prediction", "Actual"), mode = "everything")
 }
 
-```
+adjust_thres(eval_prob$`1`,.30, test$output) #Not much changes here because of the high probability splits of the data outcomes. Let's take a closer look. We can see that the algo isn't marginally mis-classifying these rows, it's very confidently wrong. Which likely means that there's too much emphasis being placed on too small a number of variables, principally the funfetti variable. 
 
-Part 3. Based on your exploration in Part 2, change the threshold using the function provided, what differences do you see in the evaluation metrics? Speak specifically to the metrics you think are best suited to address the questions you are trying to answer. 
+loan_eval_prob$test <- test$outcome
 
-```{r echo = FALSE}
+View(loan_eval_prob)
 
+(error = mean(eval != test$output))#overall error rate, on average when does our prediction not match the actual, looks like around 15%, really just ok.
 ```
 
 Part 4. Summarize your findings to include recommendations on how you might change each of the two kNN models based on the results. These recommendations might include gathering more data, adjusting the threshold or maybe that it's working fine at the current level and nothing should be done. Regardless of the outcome, what should we be aware of when these models are deployed? 
