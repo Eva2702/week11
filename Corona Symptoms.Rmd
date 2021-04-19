@@ -18,59 +18,95 @@ library(MLmetrics)
 
 Select either as a lab or individual two datasets that you have not used before but that are of interest to you/group. Define questions that can be answered using a classification, specifically kNN, for each dataset. Build kNN models and then use the evaluation metrics we discussed in class (Accuracy, TPR, FPR, F1, Kappa, LogLoss and ROC/AUC) to assess the quality of the models. Make sure to calculate the base rate or prevalence to provide a reference for some of these measures.
 
-####Implementation 
+####Implementation
 
-This data set involves people who are experiencing symptoms of COVID-19 such as fever, tiredness, dry-couch, sore-throat, etc., as well as physical characteristics such as sex and age. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient considers their symptoms to be severe based purely on symptoms/experiences, country, and contact (We wish that we could have used the whole data set, but there were too many variables for the RAM that is allowed by Rstudio.cloud to compute).
+This data set involves people who are experiencing symptoms of COVID-19 such as fever, tiredness, dry-couch, sore-throat, etc., as well as physical characteristics such as sex and age. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient will have covid or not.
 
 Data Source: https://www.kaggle.com/iamhungundji/covid19-symptoms-checker
+
+#### Cleaning
 ```{r}
-Rona <- read.csv('corona.csv')
+Corona <- read.csv('corona.csv')
 #This data set is nearly perfect, there are no NA's or weird characters and every column is in a boolean format except for the country variable, which needs to be a String or character vector
 
-#to test for the severe severity, we need to remove the other severity categories because that would give us 100% clarity on whether they think they're severe or not
-Corona <- Rona[ , c(-22, -20, -21, -19, -18, -17, -16, -15, -14, -13, -12)] 
+Corona2 <- Corona %>% filter(corona_result != 'other', na.rm = TRUE)
 
-#the decision tree was taking too much ram for even the max amount of ram allowed on my account, so we needed to shrink the dataset
-#yes, even after the column restriction
-Corona_data <- Corona[1:80000,]
+Corona3 <- Corona2[complete.cases(Corona2), ]
+Corona_Data <- Corona3[1:80000, -8] 
+
+Corona_Data$corona_result <- as.factor(recode(Corona_Data$corona_result, 'positive' = 1, 'negative' = 0))
+
+table(Corona_Data$corona_result)
 
 
-Corona_data$Severity_Severe <- as.factor(Corona_data$Severity_Severe)
-View(Corona_data)
+View(Corona_Data)
 
 ```
 
-
+#### Accuracy
 ```{r}
-set.seed(1980)# setting the seed for replication purposes
+set.seed(2100)# setting the seed for replication purposes
 
-split_index <- createDataPartition(Corona_data$Severity_Severe, p = .8, #80-20: train-test
+split_index <- createDataPartition(Corona_Data$corona_result, p = .8, #80-20: train-test
                                   list = FALSE,# no lists please
                                   times = 1)#just 1 partition
-train_data <- Corona_data[split_index,]
+train_data <- Corona_Data[split_index,]
 dim(train_data)
 
 
-test <- Corona_data[-split_index,]
+test <- Corona_Data[-split_index,]
 dim(test)
 
 #creating the decision tree
-loan_tree <- train(Severity_Severe~., #model formula everything used to classify outcome
+corona_tree <- train(corona_result~., #model formula everything used to classify outcome
                    data=train_data, #use the training data
                    method='rpart',# indicates the use of tree based model
                    na.action = na.omit)#omitting the missing values
                    
-loan_tree
+corona_tree
 
-xx <- tibble(loan_tree$resample)
-View(xx)
+xx <- tibble(corona_tree$resample)
 mean(xx$Accuracy)
+```
 
-loan_tree$finalModel$variable.importance#This will tell us the most important variables in terms of reducing our model error
+#### Confusion Matrix
+```{r}
+corona_eval <-(predict(corona_tree,newdata = test))#generates 1s and 0s
+
+corona_eval_prob <- predict(corona_tree,newdata = test, type = "prob")#this gives us the predicted prob, we will need these later for the fairness evaluation
+View(loan_eval_prob)
 
 
+confusionMatrix(corona_eval, test$corona_result, positive = "1", dnn=c("Prediction", "Actual"), mode = "sens_spec")
 
-loan_tree$finalModel
+
+#looking at the error of the confusion matrix
+corona_eval_prob$test <- test$corona_result
+
+(error = mean(corona_eval != test$corona_result))
+```
+
+#### ROCR
+```{r}
+corona_eval <- data.frame(pred_class=corona_eval, pred_prob=corona_eval_prob$`1`,target=as.numeric(test$corona_result))
+
+pred <- prediction(corona_eval$pred_prob,corona_eval$target)
+
+tree_perf <- performance(pred,"tpr","fpr")
+
+plot(tree_perf, colorize=TRUE)
+abline(a=0, b= 1)
+
+tree_perf_AUC <- performance(pred,"auc")
+
+print(tree_perf_AUC@y.values)
+
+```
+#### LogLoss and F1 score
+```{r}
+LogLoss(as.numeric(corona_eval$pred_prob), as.numeric(test$corona_result))
+
+F1_Score(as.numeric(corona_eval$pred_class.pred_class),as.numeric(test$corona_result))
 
 ```
 
@@ -87,8 +123,18 @@ Take a closer look at where miss-classification errors are occurring, is there a
 
 Based on your exploration in Part 2, change the threshold using the function provided, what differences do you see in the evaluation metrics? Speak specifically to the metrics you think are best suited to address the questions you are trying to answer. 
 
+#### Threshold Adjustment
 ```{r}
+adjust_thres <- function(x, y, z) {
+  thres <- as.factor(ifelse(x > y, 1,0))
+  confusionMatrix(thres, z, positive = "1", dnn=c("Prediction", "Actual"), mode = "everything")
+}
 
+
+adjust_thres(corona_eval_prob$`1`,.01, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,.10, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,.50, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,.80, test$corona_result)
 ```
 
 ###Part 4 
