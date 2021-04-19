@@ -1,8 +1,6 @@
 ---
 
 title: "Death by Heart Failure"
-=======
-title: "corona"
 output: html_document
 ---
 
