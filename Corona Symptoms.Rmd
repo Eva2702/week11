@@ -67,6 +67,7 @@ corona_tree
 
 xx <- tibble(corona_tree$resample)
 mean(xx$Accuracy)
+corona_tree$finalModel$variable.importance
 ```
 
 #### Confusion Matrix
