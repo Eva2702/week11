@@ -1,5 +1,8 @@
 ---
+
 title: "Death by Heart Failure"
+=======
+title: "corona"
 output: html_document
 ---
 
@@ -27,8 +30,12 @@ Select either as a lab or individual two datasets that you have not used before 
 
 Data Source: https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
 
+
+
+
 #### Cleaning
 ```{r}
+
 
 heart <- read.csv('heart_Eva.csv')
 #This data set is nearly perfect, there are no NA's or weird characters and every column is in a boolean format except for the country variable, which needs to be a String or character vector
