@@ -67,6 +67,8 @@ corona_tree
 
 xx <- tibble(corona_tree$resample)
 mean(xx$Accuracy)
+
+
 corona_tree$finalModel$variable.importance
 ```
 
@@ -75,7 +77,7 @@ corona_tree$finalModel$variable.importance
 corona_eval <-(predict(corona_tree,newdata = test))#generates 1s and 0s
 
 corona_eval_prob <- predict(corona_tree,newdata = test, type = "prob")#this gives us the predicted prob, we will need these later for the fairness evaluation
-View(loan_eval_prob)
+View(corona_eval_prob)
 
 
 confusionMatrix(corona_eval, test$corona_result, positive = "1", dnn=c("Prediction", "Actual"), mode = "sens_spec")
@@ -97,52 +99,87 @@ tree_perf <- performance(pred,"tpr","fpr")
 
 plot(tree_perf, colorize=TRUE)
 abline(a=0, b= 1)
+```
+#### Other Metrics
 
-tree_perf_AUC <- performance(pred,"auc")
 
-print(tree_perf_AUC@y.values)
+```{r, echo=FALSE}
+# Formula = FP/FP+TN
+cat('False Positive rate: .00345 or 54/15657 \n')
+# Formula = TP/TP+FN
+cat('True Positive Rate: .782 or 194/248 \n')
+
+cat('LogLoss: ', LogLoss(as.numeric(corona_eval$pred_prob), as.numeric(test$corona_result)), "\n")
+
+cat('F1 Score: ', F1_Score(as.numeric(corona_eval$pred_class.pred_class),as.numeric(test$corona_result)))
 
 ```
-#### LogLoss and F1 score
-```{r}
-LogLoss(as.numeric(corona_eval$pred_prob), as.numeric(test$corona_result))
-
-F1_Score(as.numeric(corona_eval$pred_class.pred_class),as.numeric(test$corona_result))
-
-```
-
 ###Part 2
 
-Take a closer look at where miss-classification errors are occurring, is there a pattern? If so discuss this pattern and why you think this is the case. 
+#### Confusion Matrix Thoughts
 
-```{r}
+When you look at the confusion matrix shown above:
 
-```
+                    Actual
+          Prediction     0     1
+                   0 15603   149
+                   1    54   194
+                   
+It becomes obvious that a significant portion of the people with positive covid test results are being classified as negative. Almost half of the test set are being classified as such. Why is this? I think I want to trace this back to the weirdest thing that was shown in our KNN model, which is the variable importance.
+
+####Variable Importance
+
+test_indicationContact with confirmed 
+                          1095.077893 
+                          
+                          head_ache1 
+                          1.150292 
+
+As you can see, if the person indicated that their reason for testing was that they had confirmed contact with a person that was infected with covid, then they are astronomically more likely to have contracted the disease yourself. The only other variable that was relevant enough to show was the yes response to headaches, and that was almost 1000x less important than the contact with a covid-positive person. So, based on those things, I am willing to bet that the misidentified people who got classified in the false negative category were misidentified becuase by the by their lack of contact with a covid-positive person. 
+                          
 
 
-###Part 3
 
-Based on your exploration in Part 2, change the threshold using the function provided, what differences do you see in the evaluation metrics? Speak specifically to the metrics you think are best suited to address the questions you are trying to answer. 
+### Part 3
 
-#### Threshold Adjustment
+#### Threshold Adjustment {.tabset}
 ```{r}
 adjust_thres <- function(x, y, z) {
   thres <- as.factor(ifelse(x > y, 1,0))
   confusionMatrix(thres, z, positive = "1", dnn=c("Prediction", "Actual"), mode = "everything")
 }
 
+```
+##### First Set
 
+```{r}
+adjust_thres(corona_eval_prob$`1`,0, test$corona_result)
 adjust_thres(corona_eval_prob$`1`,.01, test$corona_result)
+```
+
+##### Second Set
+```{r}
+
+adjust_thres(corona_eval_prob$`1`,.02, test$corona_result)
 adjust_thres(corona_eval_prob$`1`,.10, test$corona_result)
 adjust_thres(corona_eval_prob$`1`,.50, test$corona_result)
-adjust_thres(corona_eval_prob$`1`,.80, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,.75, test$corona_result)
+
 ```
+
+##### Third Set
+```{r}
+adjust_thres(corona_eval_prob$`1`,.8, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,1, test$corona_result)
+```
+
+##### Deductions
+
+First of all, these confusion matrices are... well, confusing. There are only 3 different possibilities as to the contents of the confusion matrices: all FALSE, all TRUE, and the one stationed in the middle of those two. Because I was confused, I looked directly at the corona_eval_prob to see what the problem was. WHen I did this, I realized that this "optimal" KNN algorithm that was created off of all of Corona_Data's training data, was simply using the "test_indication" variable to determine whether they would get covid. I mean it did work, it was more accurate than just guessing,however, while the FPR was amazing, the TPR was rather abysmal.
 
 ###Part 4 
 
 Summarize your findings to include recommendations on how you might change each of the two kNN models based on the results. These recommendations might include gathering more data, adjusting the threshold or maybe that it's working fine at the current level and nothing should be done. Regardless of the outcome, what should we be aware of when these models are deployed? 
 
-```{r}
-
-```
+If I were to change something in the Covid Indicator KNN model, I would probably not consider the "test_indication" variable as that variable alone was more accurate than guessing. An alternative to this is to limit the amount of negative covid results in the data so that the positive to negative ratio in the actual data because it was 78285/80000 to 1715/80000 (or roughly 97.5:2.5). We could delete negative covid_results to make the ratio closer to 75:25 or even closer to 50:50 and then create a new model based on that data. On top of this I had to limit the data in the beginning as the RAM that I allocated for RStudios couldn't handle the whole data set, even at the maximum allowed allotment. I would call this KNN model a failure as when it was wrong, it was wrong by a lot, and it only used 1 variable to compute its predictions. Lastly, if we learned anything from this specific KNN model, it would be that if you know for sure that you came in contact with a covid-positive person, you should definitely take a covid test.
 
