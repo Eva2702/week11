@@ -77,7 +77,6 @@ corona_tree$finalModel$variable.importance
 corona_eval <-(predict(corona_tree,newdata = test))#generates 1s and 0s
 
 corona_eval_prob <- predict(corona_tree,newdata = test, type = "prob")#this gives us the predicted prob, we will need these later for the fairness evaluation
-View(corona_eval_prob)
 
 
 confusionMatrix(corona_eval, test$corona_result, positive = "1", dnn=c("Prediction", "Actual"), mode = "sens_spec")
@@ -151,13 +150,14 @@ adjust_thres <- function(x, y, z) {
 
 ```
 ##### First Set
-
+These are all the same
 ```{r}
 adjust_thres(corona_eval_prob$`1`,0, test$corona_result)
 adjust_thres(corona_eval_prob$`1`,.01, test$corona_result)
 ```
 
 ##### Second Set
+These are all the same too
 ```{r}
 
 adjust_thres(corona_eval_prob$`1`,.02, test$corona_result)
@@ -168,6 +168,7 @@ adjust_thres(corona_eval_prob$`1`,.75, test$corona_result)
 ```
 
 ##### Third Set
+These two are also the same
 ```{r}
 adjust_thres(corona_eval_prob$`1`,.8, test$corona_result)
 adjust_thres(corona_eval_prob$`1`,1, test$corona_result)
@@ -178,8 +179,6 @@ adjust_thres(corona_eval_prob$`1`,1, test$corona_result)
 First of all, these confusion matrices are... well, confusing. There are only 3 different possibilities as to the contents of the confusion matrices: all FALSE, all TRUE, and the one stationed in the middle of those two. Because I was confused, I looked directly at the corona_eval_prob to see what the problem was. WHen I did this, I realized that this "optimal" KNN algorithm that was created off of all of Corona_Data's training data, was simply using the "test_indication" variable to determine whether they would get covid. I mean it did work, it was more accurate than just guessing,however, while the FPR was amazing, the TPR was rather abysmal.
 
 ###Part 4 
-
-Summarize your findings to include recommendations on how you might change each of the two kNN models based on the results. These recommendations might include gathering more data, adjusting the threshold or maybe that it's working fine at the current level and nothing should be done. Regardless of the outcome, what should we be aware of when these models are deployed? 
 
 If I were to change something in the Covid Indicator KNN model, I would probably not consider the "test_indication" variable as that variable alone was more accurate than guessing. An alternative to this is to limit the amount of negative covid results in the data so that the positive to negative ratio in the actual data because it was 78285/80000 to 1715/80000 (or roughly 97.5:2.5). We could delete negative covid_results to make the ratio closer to 75:25 or even closer to 50:50 and then create a new model based on that data. On top of this I had to limit the data in the beginning as the RAM that I allocated for RStudios couldn't handle the whole data set, even at the maximum allowed allotment. I would call this KNN model a failure as when it was wrong, it was wrong by a lot, and it only used 1 variable to compute its predictions. Lastly, if we learned anything from this specific KNN model, it would be that if you know for sure that you came in contact with a covid-positive person, you should definitely take a covid test.
 
