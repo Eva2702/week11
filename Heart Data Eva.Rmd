@@ -9,9 +9,9 @@ library(tidyverse)
 library(caret)
 library(RColorBrewer)
 library(ROCR)
-install.packages("MLmetrics")
+# install.packages("MLmetrics")
 library(MLmetrics)
-install.packages("e1071")
+# install.packages("e1071")
 library(e1071)
 ```
 
@@ -23,7 +23,7 @@ Select either as a lab or individual two datasets that you have not used before 
 
 ####Implementation
 
-
+This data set involves different variables that are considered to affect heart and sometimes lead to even heart failure. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient will have a heart failure or not. 
 
 Data Source: https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
 
@@ -32,17 +32,9 @@ Data Source: https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
 
 #### Cleaning
 ```{r}
-
-
 heart <- read.csv('heart_Eva.csv')
-#This data set is nearly perfect, there are no NA's or weird characters and every column is in a boolean format except for the country variable, which needs to be a String or character vector
-
-
+#This data set is nearly perfect, there are no NA's or weird characters.
 heart$DEATH_EVENT <- as.factor(heart$DEATH_EVENT)
-
-table(heart$DEATH_EVENT )
-
-
 
 ```
 
@@ -71,6 +63,8 @@ xx <- tibble(heart_tree$resample)
 mean(xx$Accuracy)
 heart_tree$finalModel$variable.importance
 
+#Based off of this evaluation, time is the most important variable when approaching focusing on which variable will reduce model error
+
 #And now just for fun! A barplot of the level of importance each variable plays
 library(RColorBrewer)
 coul <- brewer.pal(5, "Set2")
@@ -92,7 +86,10 @@ confusionMatrix(heart_eval, test$DEATH_EVENT, positive = "1", dnn=c("Prediction"
 heart_eval_prob$test <- test$DEATH_EVENT
 
 (error = mean(heart_eval != test$DEATH_EVENT))
+
 ```
+From the above we can see our True Positive Rate or sensitivity is at 63%, False Positive Rate (1-Specificity) is at 8%, we want this to be low.
+The accuracy is at 83.05%. And the error is at 16.95%
 
 #### ROCR
 ```{r}
