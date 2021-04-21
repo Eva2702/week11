@@ -20,7 +20,7 @@ library(e1071)
 
 #### Implementation
 
-This data set involves different variables that are considered to affect heart and sometimes lead to even heart failure. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient will have a heart failure or not. 
+This data set involves different variables that are considered to affect the heart and sometimes lead to even heart failure. We want to apply KNN to this dataset to determine if we can create a model that predicts whether the patient will have a heart failure or not. 
 
 Data Source: https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
 
