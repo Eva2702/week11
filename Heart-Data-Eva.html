@@ -257,6 +257,31 @@ div.tocify {
 <p>Data Source: <a href="https://www.kaggle.com/andrewmvd/heart-failure-clinical-data" class="uri">https://www.kaggle.com/andrewmvd/heart-failure-clinical-data</a></p>
 <div id="accuracy" class="section level5">
 <h5>Accuracy</h5>
+<pre><code>## [1] 240  13</code></pre>
+<pre><code>## [1] 59 13</code></pre>
+<pre><code>## CART 
+## 
+## 240 samples
+##  12 predictor
+##   2 classes: &#39;0&#39;, &#39;1&#39; 
+## 
+## No pre-processing
+## Resampling: Bootstrapped (25 reps) 
+## Summary of sample sizes: 240, 240, 240, 240, 240, 240, ... 
+## Resampling results across tuning parameters:
+## 
+##   cp          Accuracy   Kappa    
+##   0.01298701  0.8099581  0.5566392
+##   0.04545455  0.8253954  0.5924473
+##   0.53246753  0.7677507  0.3432342
+## 
+## Accuracy was used to select the optimal model using the largest value.
+## The final value used for the model was cp = 0.04545455.</code></pre>
+<pre><code>## [1] 0.8253954</code></pre>
+<pre><code>##                     time                      age        ejection_fraction 
+##               43.4234278                3.5592974                2.1355784 
+## creatinine_phosphokinase         serum_creatinine             serum_sodium 
+##                1.4237189                1.4237189                0.7118595</code></pre>
 <p>Based off of this evaluation, time is the most important variable when approaching focusing on which variable will reduce model error</p>
 <pre class="r"><code>#And now just for fun! A barplot of the level of importance each variable plays
 library(RColorBrewer)

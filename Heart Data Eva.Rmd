@@ -13,7 +13,7 @@ editor_options:
 ---
 
 ```{r setup, echo = FALSE, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, include = FALSE)
+knitr::opts_chunk$set(echo = FALSE, include = TRUE)
 library(tidyverse)
 library(caret)
 library(RColorBrewer)
@@ -39,7 +39,7 @@ This data set involves different variables that are considered to affect the hea
 Data Source: https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
 
 ##### Accuracy
-```{r }
+```{r}
 set.seed(2702)# setting the seed for replication purposes
 
 split_index <- createDataPartition(heart$DEATH_EVENT, p = .8, #80-20: train-test
