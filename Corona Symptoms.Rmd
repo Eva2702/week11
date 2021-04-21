@@ -27,7 +27,7 @@ library(MLmetrics)
 
 This data set involves people who are experiencing symptoms of COVID-19 such as fever, tiredness, dry-couch, sore-throat, etc., as well as physical characteristics such as sex and age. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient will have covid or not.
 
-Data Source: https://www.kaggle.com/iamhungundji/covid19-symptoms-checker
+Data Source: https://github.com/nshomron/covidpred/tree/master/data
 
 #### Cleaning
 ```{r}
@@ -164,7 +164,7 @@ adjust_thres(corona_eval_prob$`1`,1, test$corona_result)
 
 ##### Deductions
 
-First of all, these confusion matrices are... well, confusing. There are only 3 different possibilities as to the contents of the confusion matrices: all FALSE, all TRUE, and the one stationed in the middle of those two. Because I was confused, I looked directly at the corona_eval_prob to see what the problem was. WHen I did this, I realized that this "optimal" KNN algorithm that was created off of all of Corona_Data's training data, was simply using the "test_indication" variable to determine whether they would get covid. I mean it did work, it was more accurate than just guessing,however, while the FPR was amazing, the TPR was rather abysmal.
+F There are only 3 different possibilities as to the contents of the confusion matrices: all FALSE (not accurate), all TRUE (not accurate), and the one stationed in the middle of those two (we went over the metrics for this above). Because I was confused, I looked directly at the corona_eval_prob to see what the problem was. When I did this, I realized that this "optimal" KNN algorithm that was created off of all of Corona_Data's training data, was simply using the "test_indication" variable to determine whether they would get covid. I mean it did work, it was more accurate than just guessing,however, while the FPR was amazing, the TPR was just okay. This is similar to the example we did in class about where the funfetti variable had too much emphasis.
 
 ### Part 4 
 

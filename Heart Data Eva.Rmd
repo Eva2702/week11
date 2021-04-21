@@ -1,6 +1,15 @@
 ---
 title: "Death by Heart Failure"
-output: html_document
+author: "James Powell, Eva Mustavic, and Megan Lin"
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 3
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+  theme: journal
 ---
 
 ```{r setup, echo = FALSE, include=FALSE}
@@ -15,13 +24,15 @@ library(MLmetrics)
 library(e1071)
 ```
 
-###Part 1 
+### Part 1 
+```{r}
+heart <- read.csv('heart_Eva.csv')
+#This data set is nearly perfect, there are no NA's or weird characters.
+heart$DEATH_EVENT <- as.factor(heart$DEATH_EVENT)
 
-####Instructions
+```
 
-Select either as a lab or individual two datasets that you have not used before but that are of interest to you/group. Define questions that can be answered using a classification, specifically kNN, for each dataset. Build kNN models and then use the evaluation metrics we discussed in class (Accuracy, TPR, FPR, F1, Kappa, LogLoss and ROC/AUC) to assess the quality of the models. Make sure to calculate the base rate or prevalence to provide a reference for some of these measures.
-
-####Implementation
+#### Implementation {.tabset}
 
 This data set involves different variables that are considered to affect heart and sometimes lead to even heart failure. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient will have a heart failure or not. 
 
@@ -30,15 +41,10 @@ Data Source: https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
 
 
 
-#### Cleaning
-```{r}
-heart <- read.csv('heart_Eva.csv')
-#This data set is nearly perfect, there are no NA's or weird characters.
-heart$DEATH_EVENT <- as.factor(heart$DEATH_EVENT)
 
-```
 
-#### Accuracy
+
+##### Accuracy
 ```{r}
 set.seed(2702)# setting the seed for replication purposes
 
@@ -72,7 +78,7 @@ barplot(heart_tree$finalModel$variable.importance, col=coul)
 
 ```
 
-#### Confusion Matrix
+##### Confusion Matrix
 ```{r}
 heart_eval <-(predict(heart_tree,newdata = test))#generates 1s and 0s
 
@@ -91,7 +97,7 @@ heart_eval_prob$test <- test$DEATH_EVENT
 From the above we can see our True Positive Rate or sensitivity is at 63%, False Positive Rate (1-Specificity) is at 8%, we want this to be low.
 The accuracy is at 83.05%. And the error is at 16.95%
 
-#### ROCR
+##### ROCR
 ```{r}
 heart_eval <- data.frame(pred_class=heart_eval, pred_prob=heart_eval_prob$`1`,target=as.numeric(test$DEATH_EVENT))
 
@@ -107,7 +113,7 @@ tree_perf_AUC <- performance(pred,"auc")
 print(tree_perf_AUC@y.values)
 
 ```
-#### LogLoss and F1 score
+##### LogLoss and F1 score
 ```{r}
 LogLoss(as.numeric(heart_eval$pred_prob), as.numeric(test$DEATH_EVENT))
 
@@ -115,37 +121,46 @@ F1_Score(as.numeric(heart_eval$pred_class),as.numeric(test$DEATH_EVENT))
 
 ```
 
-###Part 2
+### Part 2
 
-Take a closer look at where miss-classification errors are occurring, is there a pattern? If so discuss this pattern and why you think this is the case. 
-
-```{r}
-
-```
+When you look at the confusion matrix shown above, the pattern seems similar to our covid indicator KNN model in that there are a large portion of true values that are being predicted incorrectly by our model, in this case the 7/19 actual deaths are being predicted to not die, that is over a third. However, unlike our other model, there are numerous important variables in this KNN model, though time is by far the most important according to the list of important variables
 
 
-###Part 3
+### Part 3
 
-Based on your exploration in Part 2, change the threshold using the function provided, what differences do you see in the evaluation metrics? Speak specifically to the metrics you think are best suited to address the questions you are trying to answer. 
-
-#### Threshold Adjustment
+#### Threshold Adjustment {.tabset}
 ```{r}
 adjust_thres <- function(x, y, z) {
   thres <- as.factor(ifelse(x > y, 1,0))
   confusionMatrix(thres, z, positive = "1", dnn=c("Prediction", "Actual"), mode = "everything")
 }
+```
 
-
-adjust_thres(heart_eval_prob$`1`,.01, test$DEATH_EVENT)
+##### First Set
+All predicted deaths (not accurate)
+```{r}
 adjust_thres(heart_eval_prob$`1`,.10, test$DEATH_EVENT)
+```
+
+##### Second Set
+Previously evaluated death confusion matrix for all
+```{r}
+adjust_thres(heart_eval_prob$`1`,.20, test$DEATH_EVENT)
 adjust_thres(heart_eval_prob$`1`,.50, test$DEATH_EVENT)
 adjust_thres(heart_eval_prob$`1`,.80, test$DEATH_EVENT)
 ```
 
-###Part 4 
-
-Summarize your findings to include recommendations on how you might change each of the two kNN models based on the results. These recommendations might include gathering more data, adjusting the threshold or maybe that it's working fine at the current level and nothing should be done. Regardless of the outcome, what should we be aware of when these models are deployed? 
-
+##### Third Set
+zero predicted deaths (not accurate)
 ```{r}
-
+adjust_thres(heart_eval_prob$`1`,.90, test$DEATH_EVENT)
 ```
+
+##### Deductions
+Unfortunately we have gotten a case much like the covid indicator with this KNN model, where it relies way too much on one variable to make its prediction, and yet again has only three possible confusion matrices for any given threshold: all FALSE (not accurate), all TRUE (not accurate), and the one stationed in the middle of those two (we went over the metrics for this above). Yet again the FPR was pretty good, however this time the TPR was also decent.
+
+### Part 4 
+
+This data set needs more data collection. There are less than 300 data entries in the entire set. On top of this, when the data was wrong, it was wrong by a lot, and changing the threshold did not help as the threshold that was used immediately was the most accurate. There really isn't much to conclude here other than lower time (which is the follow up period for the patient) is a very significant indicator of death from heart attacks. 
+
+Both of these models had The same flaw, and because of that I believe that it is very important to check the variable importance of every KNN model that is created, just to make sure that it isn't placing too much emphasis on a singular variable when creating the optimal model
