@@ -13,7 +13,7 @@ editor_options:
 ---
 
 ```{r setup, echo = FALSE, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, include = TRUE)
+knitr::opts_chunk$set(echo = FALSE, include = FALSE)
 library(tidyverse)
 library(caret)
 library(RColorBrewer)
@@ -25,27 +25,21 @@ library(e1071)
 ```
 
 ### Part 1 
+First, we read in the data and clean it. As for this particular dataset, it has no NAs or odd characters so there isn't much to do.
 ```{r}
 heart <- read.csv('heart_Eva.csv')
-#This data set is nearly perfect, there are no NA's or weird characters.
 heart$DEATH_EVENT <- as.factor(heart$DEATH_EVENT)
 
 ```
 
 #### Implementation {.tabset}
 
-This data set involves different variables that are considered to affect heart and sometimes lead to even heart failure. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient will have a heart failure or not. 
+This data set involves different variables that are considered to affect the heart and sometimes lead to even heart failure. We want to apply KNN to this dataset to determine if we can create a model that predicts whether the patient will have a heart failure or not. 
 
 Data Source: https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
 
-
-
-
-
-
-
 ##### Accuracy
-```{r}
+```{r }
 set.seed(2702)# setting the seed for replication purposes
 
 split_index <- createDataPartition(heart$DEATH_EVENT, p = .8, #80-20: train-test
@@ -68,18 +62,18 @@ heart_tree
 xx <- tibble(heart_tree$resample)
 mean(xx$Accuracy)
 heart_tree$finalModel$variable.importance
+```
 
-#Based off of this evaluation, time is the most important variable when approaching focusing on which variable will reduce model error
-
+Based off of this evaluation, time is the most important variable when approaching focusing on which variable will reduce model error
+```{r echo = TRUE, include = TRUE}
 #And now just for fun! A barplot of the level of importance each variable plays
 library(RColorBrewer)
 coul <- brewer.pal(5, "Set2")
 barplot(heart_tree$finalModel$variable.importance, col=coul)
-
 ```
 
 ##### Confusion Matrix
-```{r}
+```{r include = TRUE}
 heart_eval <-(predict(heart_tree,newdata = test))#generates 1s and 0s
 
 heart_eval_prob <- predict(heart_tree,newdata = test, type = "prob")#this gives us the predicted prob, we will need these later for the fairness evaluation
@@ -98,7 +92,8 @@ From the above we can see our True Positive Rate or sensitivity is at 63%, False
 The accuracy is at 83.05%. And the error is at 16.95%
 
 ##### ROCR
-```{r}
+We plotted the linear regression of the true positive rate against the false positive rate and color coded it.
+```{r include = TRUE}
 heart_eval <- data.frame(pred_class=heart_eval, pred_prob=heart_eval_prob$`1`,target=as.numeric(test$DEATH_EVENT))
 
 pred <- prediction(heart_eval$pred_prob,heart_eval$target)
@@ -111,25 +106,30 @@ abline(a=0, b= 1)
 tree_perf_AUC <- performance(pred,"auc")
 
 print(tree_perf_AUC@y.values)
-
 ```
+
 ##### LogLoss and F1 score
-```{r}
+```{r include = TRUE}
 LogLoss(as.numeric(heart_eval$pred_prob), as.numeric(test$DEATH_EVENT))
 
 F1_Score(as.numeric(heart_eval$pred_class),as.numeric(test$DEATH_EVENT))
-
 ```
+The LogLoss score is found to be 1.36322 while the F1 score is found to be 0.8809524. 
+
+The LogLoss ideally should be 0 so this could be further improved. This indicates some uncertainty in the data.
+
+The F1 score is derived from the confusion matrix which then generates a precision and sensitivity score that is then weighted and combined to form the F1 score This number is pretty good since the ideal value is 1 indicating there are low false positive and low false negatives. 
+
 
 ### Part 2
 
-When you look at the confusion matrix shown above, the pattern seems similar to our covid indicator KNN model in that there are a large portion of true values that are being predicted incorrectly by our model, in this case the 7/19 actual deaths are being predicted to not die, that is over a third. However, unlike our other model, there are numerous important variables in this KNN model, though time is by far the most important according to the list of important variables
+When you look at the confusion matrix shown above, the pattern seems similar to our COVID indicator KNN model in that there are a large portion of true values that are being predicted incorrectly by our model, in this case the 7/19 actual deaths are being predicted to not die, that is over a third. However, unlike our other model, there are numerous important variables in this KNN model, though time is by far the most important according to the list of important variables
 
 
 ### Part 3
 
 #### Threshold Adjustment {.tabset}
-```{r}
+```{r include = TRUE}
 adjust_thres <- function(x, y, z) {
   thres <- as.factor(ifelse(x > y, 1,0))
   confusionMatrix(thres, z, positive = "1", dnn=c("Prediction", "Actual"), mode = "everything")
@@ -138,21 +138,31 @@ adjust_thres <- function(x, y, z) {
 
 ##### First Set
 All predicted deaths (not accurate)
-```{r}
+```{r include = TRUE}
 adjust_thres(heart_eval_prob$`1`,.10, test$DEATH_EVENT)
 ```
 
 ##### Second Set
 Previously evaluated death confusion matrix for all
-```{r}
+
+Threshold of 0.2
+```{r include = TRUE}
 adjust_thres(heart_eval_prob$`1`,.20, test$DEATH_EVENT)
+```
+
+Threshold of 0.5
+```{r include = TRUE}
 adjust_thres(heart_eval_prob$`1`,.50, test$DEATH_EVENT)
+```
+
+Threshold of 0.8
+```{r include = TRUE}
 adjust_thres(heart_eval_prob$`1`,.80, test$DEATH_EVENT)
 ```
 
 ##### Third Set
-zero predicted deaths (not accurate)
-```{r}
+Zero predicted deaths (not accurate) using a threshold of 0.9
+```{r include = TRUE}
 adjust_thres(heart_eval_prob$`1`,.90, test$DEATH_EVENT)
 ```
 
@@ -161,6 +171,6 @@ Unfortunately we have gotten a case much like the covid indicator with this KNN 
 
 ### Part 4 
 
-This data set needs more data collection. There are less than 300 data entries in the entire set. On top of this, when the data was wrong, it was wrong by a lot, and changing the threshold did not help as the threshold that was used immediately was the most accurate. There really isn't much to conclude here other than lower time (which is the follow up period for the patient) is a very significant indicator of death from heart attacks. 
+This data set needs more data collection to create a larger sample size. There are less than 300 data entries in the entire set. On top of this, when the data was wrong, it was wrong by a large margin, and changing the threshold did not help as the threshold that was used immediately was the most accurate. The major significant finding was that lower time (which is the follow up period for the patient) is a significant indicator of death from heart attacks. 
 
-Both of these models had The same flaw, and because of that I believe that it is very important to check the variable importance of every KNN model that is created, just to make sure that it isn't placing too much emphasis on a singular variable when creating the optimal model
+Both of these models had the same flaw, and because of that, we believe that it is integral to check the variable importance of every KNN model that is created, just to make sure that it isn't placing too much emphasis on a singular variable when trying to create the optimal model.

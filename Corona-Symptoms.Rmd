@@ -1,0 +1,184 @@
+---
+title: "Corona Indicator KNN"
+author: "James Powell, Eva Mustavic, and Megan Lin"
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 3
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+  theme: journal
+---
+
+```{r setup, echo = FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = TRUE)
+library(tidyverse)
+library(caret)
+library(RColorBrewer)
+library(ROCR)
+library(MLmetrics)
+```
+ 
+### Part 1 
+ 
+#### Implementation
+
+This data set involves people who are experiencing symptoms of COVID-19 such as fever, tiredness, dry-couch, sore-throat, etc., as well as physical characteristics such as sex and age. We want to apply to KNN to this dataset to determine if we can create a model that predicts whether the patient will have covid or not.
+
+Data Source: https://github.com/nshomron/covidpred/tree/master/data
+
+#### Cleaning
+The dataset was mostly clean, but was recoded where appropriate. Furthermore, our dataset was too large so a subset was created to accommodate for the RAM size RStudio allocated to projects.
+```{r}
+Corona <- read.csv('corona.csv')
+#This data set is nearly perfect, there are no NA's or weird characters and every column is in a boolean format except for the country variable, which needs to be a String or character vector
+
+Corona2 <- Corona %>% filter(corona_result != 'other', na.rm = TRUE)
+
+Corona3 <- Corona2[complete.cases(Corona2), ]
+Corona_Data <- Corona3[1:50000, -8] 
+
+Corona_Data$corona_result <- as.factor(recode(Corona_Data$corona_result, 'positive' = 1, 'negative' = 0))
+
+cat('the negative to positive covid result ratio is shown by: ' ,table(Corona_Data$corona_result))
+```
+#### Metrics {.tabset}
+##### Accuracy
+test_indicationContact is chosen as the most important variable to improve our predictions.
+```{r include = TRUE}
+set.seed(2100)# setting the seed for replication purposes
+
+split_index <- createDataPartition(Corona_Data$corona_result, p = .8, #80-20: train-test
+                                  list = FALSE,# no lists please
+                                  times = 1)#just 1 partition
+train_data <- Corona_Data[split_index,] #the 80% training data
+test <- Corona_Data[-split_index,] #the 20% testing data
+
+#creating the decision tree
+corona_tree <- train(corona_result~., #model formula everything used to classify outcome
+                   data=train_data, #use the training data
+                   method='rpart',# indicates the use of tree based model
+                   na.action = na.omit)#omitting the missing values
+                   
+corona_tree
+
+#assessing accuracy
+xx <- tibble(corona_tree$resample)
+cat('Accuracy: ',mean(xx$Accuracy))
+
+#important variables
+corona_tree$finalModel$variable.importance
+```
+
+##### Confusion Matrix
+```{r}
+corona_eval <-(predict(corona_tree,newdata = test))#generates 1s and 0s
+
+corona_eval_prob <- predict(corona_tree,newdata = test, type = "prob")#this gives us the predicted prob, we will need these later for the fairness evaluation
+
+
+confusionMatrix(corona_eval, test$corona_result, positive = "1", dnn=c("Prediction", "Actual"), mode = "sens_spec")
+
+
+#looking at the error of the confusion matrix
+corona_eval_prob$test <- test$corona_result
+
+(error = mean(corona_eval != test$corona_result))
+```
+From the above we can see our True Positive Rate or sensitivity is at 54%, False Positive Rate (1-Specificity) is at 0.3%, we want this to be low. The accuracy is at 98.8%. And the error is at 1.2% Aside from sensitivity, these are all very good numbers indicating an accurate, low error, and low false-positive likely model.
+
+##### ROCR
+
+We plotted the linear regression of the true positive rate against the false positive rate and color coded it.
+```{r}
+corona_eval <- data.frame(pred_class=corona_eval, pred_prob=corona_eval_prob$`1`,target=as.numeric(test$corona_result))
+
+pred <- prediction(corona_eval$pred_prob,corona_eval$target)
+
+tree_perf <- performance(pred,"tpr","fpr")
+
+plot(tree_perf, colorize=TRUE)
+abline(a=0, b= 1)
+```
+
+##### Other Metrics
+
+```{r, echo=FALSE}
+# Formula = FP/FP+TN
+cat('False Positive rate: .00276 or 27/9795 \n')
+# Formula = TP/TP+FN
+cat('True Positive Rate: .804 or 111/138 \n')
+
+cat('LogLoss: ', LogLoss(as.numeric(corona_eval$pred_prob), as.numeric(test$corona_result)), "\n")
+
+cat('F1 Score: ', F1_Score(as.numeric(corona_eval$pred_class),as.numeric(test$corona_result)))
+
+```
+
+The LogLoss score is found to be 1.36322 while the F1 score is found to be 0.8809524.
+
+The LogLoss ideally should be 0 so this could be further improved. This indicates some uncertainty in the data.
+
+The F1 score is derived from the confusion matrix which then generates a precision and sensitivity score that is then weighted and combined to form the F1 score This number is pretty good since the ideal value is 1 indicating there are low false positive and low false negatives.
+
+### Part 2
+
+#### Confusion Matrix Thoughts
+
+When you look at the confusion matrix shown above, it becomes obvious that a significant portion of the people with positive covid test results are being classified as negative. Almost half of the test set are being classified as such. Why is this? I think I want to trace this back to the weirdest thing that was shown in our KNN model, which is the variable importance.
+
+#### Variable Importance
+
+test_indicationContact with confirmed 
+                             653.9973
+
+As you can see, if the person indicated that their reason for testing was that they had confirmed contact with a person that was infected with covid, then they are astronomically more likely to have contracted the disease yourself, and there were no other relevant variables. So, based on those things, I am willing to bet that the misidentified people who got classified in the false negative category were misidentified because by the by their lack of contact with a covid-positive person. 
+                          
+
+
+
+### Part 3
+
+#### Threshold Adjustment {.tabset}
+```{r}
+adjust_thres <- function(x, y, z) {
+  thres <- as.factor(ifelse(x > y, 1,0))
+  confusionMatrix(thres, z, positive = "1", dnn=c("Prediction", "Actual"), mode = "everything")
+}
+
+```
+##### First Set
+These are all the same
+```{r, echo=TRUE}
+adjust_thres(corona_eval_prob$`1`,0, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,.01, test$corona_result)
+```
+
+##### Second Set
+These are all the same too
+```{r, echo=TRUE}
+
+adjust_thres(corona_eval_prob$`1`,.02, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,.10, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,.50, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,.75, test$corona_result)
+
+```
+
+##### Third Set
+These two are also the same
+```{r, echo=TRUE}
+adjust_thres(corona_eval_prob$`1`,.8, test$corona_result)
+adjust_thres(corona_eval_prob$`1`,1, test$corona_result)
+```
+
+##### Deductions
+
+There are only 3 different possibilities as to the contents of the confusion matrices: all FALSE (not accurate), all TRUE (not accurate), and the one stationed in the middle of those two (we went over the metrics for this above). Because I was confused, I looked directly at the corona_eval_prob to see what the problem was. When I did this, I realized that this "optimal" KNN algorithm that was created off of all of Corona_Data's training data, was simply using the "test_indication" variable to determine whether they would get covid. I mean it did work, it was more accurate than just guessing,however, while the FPR was amazing, the TPR was just okay. This is similar to the example we did in class about where the funfetti variable had too much emphasis.
+
+### Part 4 
+
+If I were to change something in the Covid Indicator KNN model, I would probably not consider the "test_indication" variable as that variable alone was more accurate than guessing. An alternative to this is to limit the amount of negative covid results in the data so that the positive to negative ratio in the actual data because it was 58729/60000 to 1271/60000 (or roughly 97.5:2.5). We could delete negative covid_results to make the ratio closer to 75:25 or even closer to 50:50 and then create a new model based on that data. On top of this I had to limit the data in the beginning as the RAM that I allocated for RStudios couldn't handle the whole data set, even at the maximum allowed allotment. I would call this KNN model a failure as when it was wrong, it was wrong by a lot, and it only used 1 variable to compute its predictions. Lastly, if we learned anything from this specific KNN model, it would be that if you know for sure that you came in contact with a covid-positive person, you should definitely take a covid test.
+

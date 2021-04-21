@@ -30,6 +30,7 @@ This data set involves people who are experiencing symptoms of COVID-19 such as 
 Data Source: https://github.com/nshomron/covidpred/tree/master/data
 
 #### Cleaning
+The dataset was mostly clean, but was recoded where appropriate. Furthermore, our dataset was too large so a subset was created to accommodate for the RAM size RStudio allocated to projects.
 ```{r}
 Corona <- read.csv('corona.csv')
 #This data set is nearly perfect, there are no NA's or weird characters and every column is in a boolean format except for the country variable, which needs to be a String or character vector
@@ -45,7 +46,8 @@ cat('the negative to positive covid result ratio is shown by: ' ,table(Corona_Da
 ```
 #### Metrics {.tabset}
 ##### Accuracy
-```{r}
+test_indicationContact is chosen as the most important variable to improve our predictions.
+```{r include = TRUE}
 set.seed(2100)# setting the seed for replication purposes
 
 split_index <- createDataPartition(Corona_Data$corona_result, p = .8, #80-20: train-test
@@ -85,8 +87,11 @@ corona_eval_prob$test <- test$corona_result
 
 (error = mean(corona_eval != test$corona_result))
 ```
+From the above we can see our True Positive Rate or sensitivity is at 54%, False Positive Rate (1-Specificity) is at 0.3%, we want this to be low. The accuracy is at 98.8%. And the error is at 1.2% Aside from sensitivity, these are all very good numbers indicating an accurate, low error, and low false-positive likely model.
 
 ##### ROCR
+
+We plotted the linear regression of the true positive rate against the false positive rate and color coded it.
 ```{r}
 corona_eval <- data.frame(pred_class=corona_eval, pred_prob=corona_eval_prob$`1`,target=as.numeric(test$corona_result))
 
@@ -97,10 +102,10 @@ tree_perf <- performance(pred,"tpr","fpr")
 plot(tree_perf, colorize=TRUE)
 abline(a=0, b= 1)
 ```
+
 ##### Other Metrics
 
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, include = TRUE}
 # Formula = FP/FP+TN
 cat('False Positive rate: .00276 or 27/9795 \n')
 # Formula = TP/TP+FN
@@ -111,18 +116,25 @@ cat('LogLoss: ', LogLoss(as.numeric(corona_eval$pred_prob), as.numeric(test$coro
 cat('F1 Score: ', F1_Score(as.numeric(corona_eval$pred_class),as.numeric(test$corona_result)))
 
 ```
+
+The LogLoss score is found to be 4.592146 while the F1 score is found to be 0.993895
+
+The LogLoss ideally should be 0 so this is not a good score and indicates uncertainty in the data. This was also reflected in the previously found low sensitivity/true positive score.
+
+The F1 score is derived from the confusion matrix which then generates a precision and sensitivity score that is then weighted and combined to form the F1 score This number is very good since the ideal value is 1 indicating there are low false positive and low false negatives which is further backed up by the previously found low false positive rate and low error rate.
+
 ### Part 2
 
 #### Confusion Matrix Thoughts
 
-When you look at the confusion matrix shown above, it becomes obvious that a significant portion of the people with positive covid test results are being classified as negative. Almost half of the test set are being classified as such. Why is this? I think I want to trace this back to the weirdest thing that was shown in our KNN model, which is the variable importance.
+When you look at the confusion matrix shown above, it becomes obvious that a significant portion of the people with positive covid test results are being classified as negative. Almost half of the test set are being classified as such. Why is this? We suspect this has likely to do with the most important variable that was previously singled out as test_indicationContact.
 
 #### Variable Importance
 
 test_indicationContact with confirmed 
                              653.9973
 
-As you can see, if the person indicated that their reason for testing was that they had confirmed contact with a person that was infected with covid, then they are astronomically more likely to have contracted the disease yourself, and there were no other relevant variables. So, based on those things, I am willing to bet that the misidentified people who got classified in the false negative category were misidentified because by the by their lack of contact with a covid-positive person. 
+As you can see, if the person indicated that their reason for testing was that they had confirmed contact with a person that was infected with covid, then they are astronomically more likely to have contracted the disease themself, and there were no other relevant variables. So, based on those things, we are willing to bet that the misidentified people who got classified in the false negative category were misidentified because by the by their lack of contact with a covid-positive person. 
                           
 
 
@@ -130,7 +142,7 @@ As you can see, if the person indicated that their reason for testing was that t
 ### Part 3
 
 #### Threshold Adjustment {.tabset}
-```{r}
+```{r include = TRUE}
 adjust_thres <- function(x, y, z) {
   thres <- as.factor(ifelse(x > y, 1,0))
   confusionMatrix(thres, z, positive = "1", dnn=c("Prediction", "Actual"), mode = "everything")
@@ -138,33 +150,50 @@ adjust_thres <- function(x, y, z) {
 
 ```
 ##### First Set
-These are all the same
-```{r, echo=TRUE}
+These are all the same (Thresholds of 0 and 0.01)
+```{r, echo=TRUE, include = TRUE}
 adjust_thres(corona_eval_prob$`1`,0, test$corona_result)
 adjust_thres(corona_eval_prob$`1`,.01, test$corona_result)
 ```
 
 ##### Second Set
-These are all the same too
-```{r, echo=TRUE}
+These are all the same too 
 
+Threshold of 0.02
+```{r, echo=TRUE, include = TRUE}
 adjust_thres(corona_eval_prob$`1`,.02, test$corona_result)
-adjust_thres(corona_eval_prob$`1`,.10, test$corona_result)
-adjust_thres(corona_eval_prob$`1`,.50, test$corona_result)
-adjust_thres(corona_eval_prob$`1`,.75, test$corona_result)
+```
 
+Threshold of 0.1
+```{r, echo=TRUE, include = TRUE}
+adjust_thres(corona_eval_prob$`1`,.10, test$corona_result)
+```
+
+Threshold of 0.5
+```{r, echo=TRUE, include = TRUE}
+adjust_thres(corona_eval_prob$`1`,.50, test$corona_result)
+```
+
+Threshold of 0.75
+```{r, echo=TRUE, include = TRUE}
+adjust_thres(corona_eval_prob$`1`,.75, test$corona_result)
 ```
 
 ##### Third Set
 These two are also the same
-```{r, echo=TRUE}
+```{r echo=TRUE, include = TRUE}
 adjust_thres(corona_eval_prob$`1`,.8, test$corona_result)
+```
+Threshold of 0.8
+
+Threshold of 1
+```{r echo=TRUE, include = TRUE}
 adjust_thres(corona_eval_prob$`1`,1, test$corona_result)
 ```
 
 ##### Deductions
 
-F There are only 3 different possibilities as to the contents of the confusion matrices: all FALSE (not accurate), all TRUE (not accurate), and the one stationed in the middle of those two (we went over the metrics for this above). Because I was confused, I looked directly at the corona_eval_prob to see what the problem was. When I did this, I realized that this "optimal" KNN algorithm that was created off of all of Corona_Data's training data, was simply using the "test_indication" variable to determine whether they would get covid. I mean it did work, it was more accurate than just guessing,however, while the FPR was amazing, the TPR was just okay. This is similar to the example we did in class about where the funfetti variable had too much emphasis.
+There are only 3 different possibilities as to the contents of the confusion matrices: all FALSE (not accurate), all TRUE (not accurate), and the one stationed in the middle of those two (we went over the metrics for this above). Because I was confused, I looked directly at the corona_eval_prob to see what the problem was. When I did this, I realized that this "optimal" KNN algorithm that was created off of all of Corona_Data's training data, was simply using the "test_indication" variable to determine whether they would get covid. I mean it did work, it was more accurate than just guessing,however, while the FPR was amazing, the TPR was just okay. This is similar to the example we did in class about where the funfetti variable had too much emphasis.
 
 ### Part 4 
 
